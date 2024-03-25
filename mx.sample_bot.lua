@@ -1,5 +1,5 @@
 -- mx.sample_bot v1.0.0
--- roll your own sample packs 
+-- Create your own sample packs 
 -- for mx.samples
 -- 
 -- Use enc2 & enc3 to
@@ -12,7 +12,6 @@
 
 
 -- TO DO:
--- stereo/mono input selectorion
 -- clean and comment code
 -- write README instructions 
 -- manual sample creation (for non-midi controlled sound-making devices)
