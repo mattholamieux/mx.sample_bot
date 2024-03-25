@@ -10,12 +10,6 @@
 -- k1+k2: Preview
 -- k1+k3: Save
 
-
--- TO DO:
--- clean and comment code
--- write README instructions 
--- manual sample creation (for non-midi controlled sound-making devices)
-
 textentry = require('textentry')
 
 function init()
@@ -33,7 +27,6 @@ function init()
   midi_channel = 1
   selector = 2
   offset = 0
-  out_midi = midi.connect(midi_device)
   isRecording = false
   isAuditioning = false
   isPreviewing = false
@@ -43,22 +36,20 @@ function init()
   alt = false
   last_amp = 0
   calculateTime()
-  sc_init()
-  
+  sc_init() -- initialize softcut settings
   for i = 1,#midi.vports do -- query all ports
     table.insert(midi_devices,"port "..i..": "..util.trim_string_to_width(midi.vports[i].name,48)) -- register its name
   end
-
+  out_midi = midi.connect(midi_device)
 end
 
-function sequence()
+function sequence() -- play back the defined sequence of notes
   note_number = 0
   clock.sleep(0.05)
   while note <= end_note do
     while counter <= #velocity do
       note_number = note_number + 1
       redraw()
-      print(note, velocity[counter], midi_channel)
       out_midi:note_on(note, velocity[counter], midi_channel)
       clock.sleep(sustain)
       out_midi:note_off(note, velocity[counter], midi_channel)
@@ -68,7 +59,7 @@ function sequence()
     note = note + sample_every
     counter = 1
   end
-  for i=1, 2 do
+  for i=1, 2 do -- stop recording
     softcut.rec(i,0)
   end
   isRecording = false
@@ -76,7 +67,7 @@ function sequence()
 end
 
 function key(n,z)
-  if n==1 then
+  if n==1 then -- k1 actions
     if z==1 then
       alt = true
     else 
@@ -88,11 +79,38 @@ function key(n,z)
         isPreviewing = false
       end
     end
-    -- redraw()
-    print(alt)
   end
   
-  if n==3 and z==1 then
+  if n==2 and z==1 then -- k2 actions
+    if alt then
+      if not isPreviewing then
+        isPreviewing = true
+        for i=1, 2 do -- playback the recording 
+          softcut.loop_start(i,1)
+          softcut.loop_end(i,rec_length+1.05)
+          softcut.position(i,1)
+          softcut.play(i,1)
+        end
+      end
+    elseif save_error or save_success then
+      save_error = false
+      save_success = false
+    else 
+      if isRecording == false then
+        if isAuditioning == true then -- if currently auditioning, stop and return to main screen
+          clock.cancel(play)
+          out_midi:note_off(note,min_vel, midi_channel)
+          isAuditioning = false
+        else -- otherwise, audition the sequence
+          note = start_note
+          play = clock.run(sequence)
+          isAuditioning = true
+        end
+      end
+    end
+  end
+  
+  if n==3 and z==1 then -- k3 actions
     if alt then
       if isPreviewing then
           for i=1, 2 do
@@ -105,7 +123,6 @@ function key(n,z)
     elseif save_error or save_success then
       save_error = false
       save_success = false
-      -- redraw()
     else
       if isAuditioning == false then
         if isRecording then
@@ -119,54 +136,21 @@ function key(n,z)
           isRecording = true
         end
       end
-      -- redraw()
-    end
-    -- redraw()
-  end
-  if n==2 and z==1 then
-    if alt then
-      if not isPreviewing then
-        isPreviewing = true
-        for i=1, 2 do
-          softcut.loop_start(i,1)
-          softcut.loop_end(i,rec_length+1.05)
-          softcut.position(i,1)
-          softcut.play(i,1)
-        end
-      end
-    elseif save_error or save_success then
-      save_error = false
-      save_success = false
-    else
-      if isRecording == false then
-        if isAuditioning == true then
-          clock.cancel(play)
-          out_midi:note_off(note,min_vel, midi_channel)
-          isAuditioning = false
-        else
-          note = start_note
-          play = clock.run(sequence)
-          isAuditioning = true
-        end
-      end
-    -- redraw()
     end
   end
   redraw()
 end
 
-
 function enc(n,d)
-    if n==2 then
+    if n==2 then -- e2 actions (moving the selector)
         selector = util.clamp(selector +d, 2, 13)
         if selector > 4 then
           offset = (selector - 5) * 10
         end
     end
-    if n==3 then
+    if n==3 then -- e3 actions 
       if selector == 2 then
           midi_device = util.clamp(midi_device + d, 1, #midi_devices)
-          -- midi_device_name = midi_devices[midi_device]
           out_midi = midi.connect(midi_device)
       elseif selector == 3 then
         midi_channel = util.clamp(midi_channel + d, 1, 16)
@@ -320,7 +304,6 @@ function save_pack(txt)
       local note = start_note
       local file_length = sustain + release
       local file_start = 1.05
-    
       while note <= end_note do -- notes while loop
         while counter <= #velocity do -- velocity layer while loop
           print(note.."."..counter.."."..vel_layers..".1.0.wav")
@@ -341,7 +324,6 @@ function save_pack(txt)
 end
 
 function sc_init()
-    -- send audio input to softcut input
   audio.level_adc_cut(1)
   sc_stereo()
   softcut.buffer_clear()
@@ -370,7 +352,6 @@ function sc_stereo()
   input = "stereo"
 end
 
-
 function sc_mono()
   softcut.level_input_cut(1, 1, 1)
   softcut.level_input_cut(2, 1, 0)
@@ -378,7 +359,6 @@ function sc_mono()
   softcut.level_input_cut(2, 2, 0)
   input = "mono"
 end
-
 
 function sc_set_input(n)
   if n == 1 then
@@ -395,9 +375,3 @@ function sc_begin_recording()
     softcut.rec(i,1)
   end
 end
-
-function cleanup()
-end
-
-
-
