@@ -31,3 +31,4 @@ Mx.Sample_Bot sends a sequence of midi notes to the selected device while record
 * Note: The above process should work fine for most scripts that utilize mx.samples as a library (e.g. Plonky, o-o-o, zxcvbn, Spirals). However, in order for your sample pack to appear as an available instrument in the default mx.samples script, you will need to add the name of your pack to the `available_instruments` table in `mx.samples.lua`. You can use an arbitrary number for size. E.g. `{{name="my instrument",size=1},}`
 
 ### Download
+
