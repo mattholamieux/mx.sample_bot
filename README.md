@@ -32,3 +32,6 @@ Mx.Sample_Bot sends a sequence of midi notes to the selected device while record
 
 ### Download
 
+install via maiden:
+
+`;install https://github.com/mattholamieux/mx.sample_bot`
