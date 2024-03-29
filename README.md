@@ -1,5 +1,5 @@
 ## Mx.Sample_Bot
-#### Create your own sample packs for mx.samples
+#### Create your own sample packs for mx.samples on norns
 
 Inspired by multisample kit creation on the 1010 Blackbox, Mx.Sample_Bot is a simple script that helps automate the process of sampling external synths to create multisample packs for [mx.samples](https://llllllll.co/t/mx-samples/41400).
 
@@ -32,3 +32,6 @@ Mx.Sample_Bot sends a sequence of midi notes to the selected device while record
 
 ### Download
 
+install via maiden:
+
+`;install https://github.com/mattholamieux/mx.sample_bot`
