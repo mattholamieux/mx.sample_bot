@@ -1,20 +1,9 @@
--- mx.sample_bot v1.0.0
--- Create your own sample packs 
--- for mx.samples
--- 
--- Use enc2 & enc3 to
--- adjust settings
---
--- k2: Audition
--- k3: Record
--- k1+k2: Preview
--- k1+k3: Save
-
 textentry = require('textentry')
 musicUtil = require("musicutil")
--- print(musicutil.note_nums_to_names(60))
+engine.name = "TestSine"
 
 function init()
+  engine.amp(0)
   note = 60
   note_name = musicUtil.note_nums_to_names({note}, true)[1]
   vel_layers = 1
@@ -29,6 +18,8 @@ function init()
   isPreviewing = false
   isArmed = false
   counter = 1
+  amp_in = 0
+  thresh = 0.001
   saved = "..."
   alt = false
   pack_name = ""
@@ -36,14 +27,18 @@ function init()
   
   p = poll.set("amp_in_l")
   p.callback = function(val) 
-    -- print("in > "..string.format("%.3f",val)) 
-    if val > 0.001 and isArmed then
+    if val > amp_in then
+      amp_in = val
+    elseif util.round(val,0.0001) == 0 then
+      amp_in = 0
+    end
+    -- print(string.format("%.3f",amp_in))
+    if val > thresh and isArmed then
       rec_start = rec_length + 1
       print('begin recording')
       isArmed = false
-      redraw()
-      -- sc_begin_recording()
     end
+    redraw()
   end
   p.time = 0.01
   p:start()
@@ -82,7 +77,15 @@ function key(n,z)
       save_success = false
     else 
       if isRecording == false then
-        -- main k2 action
+        if isAuditioning then
+          engine.amp(0)
+          isAuditioning = false
+        else
+          freq = musicUtil.note_num_to_freq (note)
+          engine.hz(freq)
+          engine.amp(0.5)
+          isAuditioning = true
+        end
       end
     end
   end
@@ -104,8 +107,8 @@ function key(n,z)
         if isRecording then
           sc_stop_recording()
         else
+          sc_init()
           sc_begin_recording()
-          -- isArmed = true
         end
     end
   end
@@ -114,9 +117,13 @@ end
 
 function enc(n,d)
     if n==2 then -- e2 actions (moving the selector)
-        selector = util.clamp(selector +d, 2, 13)
-        if selector > 4 then
-          offset = (selector - 5) * 10
+        selector = util.clamp(selector +d, 2, 7)
+        if selector == 6 then
+          offset = 10
+        elseif selector == 7 then
+          offset = 30
+        else
+          offset = 0
         end
     end
     if n==3 then -- e3 actions 
@@ -128,23 +135,20 @@ function enc(n,d)
         note = util.clamp(note + d, 0, 127)
         note_name = musicUtil.note_nums_to_names({note}, true)[1]
       elseif selector == 4 then
-        velocity_num = util.clamp(velocity_num + d, 0, vel_layers)
+        velocity_num = util.clamp(velocity_num + d, 1, vel_layers)
       elseif selector == 5 then
         vel_layers = util.clamp(vel_layers + d, 1, 5)
       elseif selector == 6 then
         variation = util.clamp(variation + d, 1, 5)
       elseif selector == 7 then
-        
-      elseif selector == 8 then
-
+        thresh = util.clamp(thresh + (d/1000), 0.001, 0.1)
       end
     end
-    redraw()
+  redraw()
 end
 
 function redraw()
   screen.clear()
-  -- if pack_name ~= "" then
     if alt == true then
       screen.move(10,10)
       screen.text("k2 : preview | k3 : save")
@@ -169,9 +173,9 @@ function redraw()
         screen.text("dust/audio/mx.samples")
       elseif save_success then
         screen.move(10,20)
-        screen.text("sample pack saved at")
+        screen.text("sample saved at")
         screen.move(10,30)
-        screen.text("dust/audio/mx.samples")
+        screen.text("dust/audio/mx.samples/"..pack_name)
       else
         screen.move(10,10 - offset)
         screen.text("k2 : audition | k3 : record")
@@ -188,12 +192,13 @@ function redraw()
         screen.move(10,70 - offset)
         screen.text("variation: "..variation)
         screen.move(10,80 - offset)
-        screen.text("name pack "..pack_name)
+        screen.text("threshold: "..thresh)
+        screen.move(10, 90-offset)
+        screen.text('amp in '..string.format("%.3f",amp_in))
         screen.move(0, ((selector*10)+10)-offset) -- draw arrow indicator
         screen.text(">")
       end
     end
-  -- end
   screen.update()
 end
 
@@ -205,14 +210,13 @@ function save_pack()
       if not util.file_exists(dir) then
           util.make_dir(dir)
       end
-      
       local file = note.."."..velocity_num.."."..vel_layers.."."..variation..".0.wav"
       print("saved "..file)
-      softcut.buffer_write_stereo(dir..file,rec_start,(rec_length-rec_start))
-      
+      softcut.buffer_write_stereo(dir..file,rec_start+0.1,(rec_length-rec_start))
       save_success = true
     else
       save_error = true
+      print('errorrrr')
     end
   redraw()
   end
@@ -274,12 +278,12 @@ function sc_arm_recording()
   isArmed = true
 end
 
-
 function sc_begin_recording()
   print('record')
   isArmed = true
   softcut.buffer_clear()
   rec_length = 0
+  rec_start = 0
   play = clock.run(count)
   for i=1, 2 do
     softcut.position(i, 1)
@@ -304,8 +308,11 @@ function name_pack()
   clock.sleep(0.1)
   textentry.enter(
     function(x) 
+      print(x)
       if x ~= nil then 
         pack_name =x 
+      else
+        print('oops! give your pack a name')
       end
     end, "", "enter name of sample pack")
 end
